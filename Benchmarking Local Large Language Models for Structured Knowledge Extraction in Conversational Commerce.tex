@@ -116,7 +116,7 @@ $^{1}$ \quad Faculty of Informatics, Juraj Dobrila University of Pula, Zagrebač
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e. \\) 
-\abstract{A single paragraph of about 200 words maximum. For research articles, abstracts should give a pertinent overview of the work. We strongly encourage authors to use the following style of structured abstracts, but without headings: (1) Background: place the question addressed in a broad context and highlight the purpose of the study; (2) Methods: describe briefly the main methods or treatments applied; (3) Results: summarize the article's main findings; (4) Conclusions: indicate the main conclusions or interpretations. The abstract should be an objective representation of the article, it must not contain results which are not presented and substantiated in the main text and should not exaggerate the main conclusions.}
+\abstract{The integration of natural language understanding into conversational commerce requires robustly extracting structured intents from idiomatic text. While cloud-based models are highly capable, their latency, privacy risks, and operational costs necessitate efficient local alternatives. To address this, we empirically evaluate locally deployed, open-weights large language models (LLMs) on parsing multi-intent shopping cart commands into deterministic JSON schemas. We benchmark multiple models across minimal, extended, and few-shot prompting paradigms, utilizing a dual-axis framework to simultaneously measure extraction quality (operation F1-score, exact match, schema validity) and hardware performance (latency, GPU power consumption, VRAM usage). Our evaluation highlights a fundamental trade-off between schema compliance and computational overhead, demonstrating how advanced prompting techniques improve parsing accuracy while measurably impacting inference latency and power draw. Ultimately, this comprehensive profiling identifies optimal model configurations for resource-constrained environments, establishing a practical baseline for deploying cost-effective and energy-efficient LLMs in edge-based retail automation.}
 
 % Keywords
 \keyword{LLM; Prompt Engineering; Natural Language Understanding; JSON Parsing; Structured Output; Model Performance; Conversational Agents; Information Extraction;}
@@ -178,8 +178,6 @@ The template details the sections that can be used in a manuscript. Note that th
 % The order of the section titles is different for some journals. Please refer to the "Instructions for Authors” on the journal homepage.
 
 \section{Background and Related Work}
-
-The introduction should briefly place the study in a broad context and highlight why it is important. It should define the purpose of the work and its significance. The current state of the research field should be reviewed carefully and key publications cited. Please highlight controversial and diverging hypotheses when necessary. Finally, briefly mention the main aim of the work and highlight the principal conclusions. As far as possible, please keep the introduction comprehensible to scientists outside your particular field of research. Citing a journal paper \citep{ref-journal}.  Now citing a book reference \citep{ref-book1,ref-book2} or other reference types \citep{ref-unpublish,ref-url}. Please use the command \citep{ref-proceeding,ref-thesis} for the following MDPI journals, which use author--date citation: Administrative Sciences, Arts, Behavioral Sciences, Businesses, Econometrics, Economies, Education Sciences, European Journal of Investigation in Health, Psychology and Education, Games, Genealogy, Histories, Humanities, Humans, IJFS, Journal of Intelligence, Journalism and Media, JRFM, Languages, Laws, Literature, Psychology International, Publications, Religions, Risks, Social Sciences, Tourism and Hospitality, Youth. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methodology}
@@ -305,7 +303,7 @@ tf32 & TensorFloat-32\\
 %=====================================
 % References, variant A: external bibliography
 %=====================================
-\bibliography{references}
+% \bibliography{references}
 
 % If authors have biography, please use the format below
 %\section*{Short Biography of Authors}
@@ -318,8 +316,6 @@ tf32 & TensorFloat-32\\
 %{\textbf{Firstname Lastname} Biography of second author}
 
 % For the MDPI journals use author-date citation, please follow the formatting guidelines on http://www.mdpi.com/authors/references
-% To cite two works by the same author: \citeauthor{ref-journal-1a} (\citeyear{ref-journal-1a}, \citeyear{ref-journal-1b}). This produces: Whittaker (1967, 1975)
-% To cite two works by the same author with specific pages: \citeauthor{ref-journal-3a} (\citeyear{ref-journal-3a}, p. 328; \citeyear{ref-journal-3b}, p.475). This produces: Wong (1999, p. 328; 2000, p. 475)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% for journal Sci
