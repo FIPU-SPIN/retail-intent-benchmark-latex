@@ -3,23 +3,24 @@
 plot_results.py
 ===============
 Render all benchmark figures for the conversational-commerce LLM study from the
-per-run ``metrics_*.json`` files under ``Results/``.
+per-run ``metrics_*.json`` files under ``responses/``.
 
 It produces, in ``figures/`` (both vector PDF for LaTeX and 300-dpi PNG):
 
-  1. f1_by_regime          - Operation-F1 grouped bars (model x prompting regime)
-  2. quality_cost_tradeoff - energy/command (log x) vs Operation-F1 Pareto plot
-  3. latency_f1_tradeoff   - mean latency (log x) vs Operation-F1 Pareto plot
-  4. quality_metrics_grid  - grouped bars for every quality metric
-  5. cost_metrics_grid     - grouped bars for every cost metric
-  6. tokens_by_regime      - prompt vs output token counts (the decode-cost driver)
+    1. f1_by_regime              - Operation-F1 grouped bars (model x prompting regime)
+    2. quality_cost_tradeoff     - energy/command (log x) vs Operation-F1 Pareto plot
+    3. latency_f1_tradeoff       - mean latency (log x) vs Operation-F1 Pareto plot
+    4. quality_*_by_regime       - one grouped bar chart per quality metric
+    5. cost_*_by_regime          - one grouped bar chart per cost metric
+    6. prompt_tokens_by_regime   - prompt token counts
+    7. output_tokens_by_regime   - output token counts
 
 Only matplotlib + numpy are required:
 
     python3 -m venv .venv && source .venv/bin/activate
     pip install matplotlib numpy
     python plot_results.py                       # writes ./figures
-    python plot_results.py --results Results --outdir figures --dpi 300
+    python plot_results.py --results responses --outdir figures --dpi 300
 
 Energy per command is a derived quantity, E = mean_power(W) x mean_latency(s) [J].
 VRAM is reported in GB (decimal, MB/1000) and reflects the serving runtime's
@@ -51,7 +52,7 @@ PREFERRED_ORDER = [
 # Models excluded from the paper. Phi3 3.8B is omitted: under the few-shot regime
 # it emits non-JSON prose (JSON validity ~0.002), so its operation scores are not
 # a faithful measure of extraction quality. The raw run is retained under
-# Results/phi3_3_8b/ but is neither plotted nor tabulated.
+# responses/phi3_3_8b/ but is neither plotted nor tabulated.
 EXCLUDE_MODELS = {"phi3_3_8b"}
 
 DISPLAY = {
@@ -113,12 +114,19 @@ def load_data(results_dir):
         regime_files = {r: child / f"metrics_{r}.json" for r in REGIMES}
         if not any(p.exists() for p in regime_files.values()):
             continue
-        discovered.append(child.name)
-        data[child.name] = {}
+        model_data = {}
         for regime, path in regime_files.items():
             if path.exists():
                 with open(path) as fh:
-                    data[child.name][regime] = json.load(fh)
+                    model_data[regime] = json.load(fh)
+
+        # Skip partial runs so grouped bars stay consistent across models.
+        if not all(r in model_data for r in REGIMES):
+            print(f"  skipping {child.name}: missing one or more metrics_<regime>.json files")
+            continue
+
+        discovered.append(child.name)
+        data[child.name] = model_data
 
     if not discovered:
         raise SystemExit(f"No metrics_*.json files found under {results_dir.resolve()}")
@@ -134,8 +142,19 @@ def label_for(model, data):
     # fall back to the model string recorded in the JSON
     for regime in REGIMES:
         if regime in data[model]:
-            return data[model][regime].get("model", model)
+            json_label = data[model][regime].get("model")
+            return json_label if json_label else model
     return model
+
+
+def metric_slug(label):
+    slug = []
+    for ch in label.lower():
+        if ch.isalnum():
+            slug.append(ch)
+        else:
+            slug.append("_")
+    return "".join(slug).strip("_")
 
 # --------------------------------------------------------------------------- #
 # Plot helpers
@@ -143,43 +162,86 @@ def label_for(model, data):
 
 def setup_style():
     plt.rcParams.update({
-        "font.size": 10,
-        "axes.titlesize": 11,
-        "axes.labelsize": 10,
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+        "font.size": 26,
+        "axes.titlesize": 42,
+        "axes.labelsize": 38,
+        "xtick.labelsize": 30,
+        "ytick.labelsize": 30,
         "axes.spines.top": False,
         "axes.spines.right": False,
         "axes.grid": True,
         "grid.alpha": 0.3,
         "grid.linewidth": 0.6,
         "legend.frameon": False,
+        "legend.fontsize": 28,
+        "legend.title_fontsize": 28,
         "figure.dpi": 110,
     })
 
 
-def grouped_bar(ax, models, data, value_fn, ylabel, annotate_zero=True):
+def format_bar_value(v):
+    """Compact numeric format for bar labels across mixed-scale metrics."""
+    av = abs(v)
+    if av >= 100:
+        return f"{v:.0f}"
+    if av >= 10:
+        return f"{v:.1f}"
+    return f"{v:.2f}"
+
+
+def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=0.0):
     """Draw one grouped bar chart (one group per model, one bar per regime)."""
     x = np.arange(len(models))
-    width = 0.27
+    width = 0.30
     ymax = 0.0
+    bar_groups = []
     for i, regime in enumerate(REGIMES):
         vals = [value_fn(data[m][regime]) if regime in data[m] else np.nan
                 for m in models]
         ymax = max(ymax, max(v for v in vals if not math.isnan(v)))
         offs = x + (i - 1) * width
-        ax.bar(offs, vals, width, label=REGIME_LABELS[regime],
-               color=REGIME_COLORS[regime], edgecolor="white", linewidth=0.4)
-        if annotate_zero:
-            for xi, v in zip(offs, vals):
-                if not math.isnan(v) and abs(v) < 1e-9:
-                    ax.text(xi, 0.0, "0.00", ha="center", va="bottom",
-                            rotation=90, fontsize=6, color=REGIME_COLORS[regime])
+        bars = ax.bar(
+            offs,
+            vals,
+            width,
+            label=REGIME_LABELS[regime],
+            color=REGIME_COLORS[regime],
+            edgecolor="white",
+            linewidth=0.4,
+        )
+        bar_groups.append((bars, vals))
     ax.set_ylabel(ylabel)
     ax.set_xticks(x)
-    ax.set_xticklabels([label_for(m, data) for m in models], rotation=30, ha="right")
+    ax.set_xticklabels([label_for(m, data) for m in models], rotation=0, ha="center")
     ax.set_axisbelow(True)
     ax.margins(x=0.02)
     # headroom so labels/annotations are not clipped
-    ax.set_ylim(top=ymax * 1.12 if ymax > 0 else 1.0)
+    ax.set_ylim(bottom=y_min, top=ymax * 1.08 if ymax > 0 else 1.0)
+
+    if annotate_values:
+        common_label_y = y_min + (ymax - y_min) * 0.48 if ymax > y_min else y_min
+        for bars, vals in bar_groups:
+            for bar, v in zip(bars, vals):
+                if math.isnan(v):
+                    continue
+                # Keep labels at one common height when the bar allows it,
+                # otherwise fall back to centered-in-bar placement.
+                if v > common_label_y + 0.01:
+                    label_y = common_label_y
+                else:
+                    label_y = y_min + (v - y_min) / 2.0 if v >= y_min else v / 2.0
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2.0,
+                    label_y,
+                    format_bar_value(v),
+                    ha="center",
+                    va="center",
+                    fontsize=32,
+                    color="black",
+                    fontweight="bold",
+                )
 
 
 def save(fig, outdir, name, dpi):
@@ -195,16 +257,16 @@ def save(fig, outdir, name, dpi):
 # --------------------------------------------------------------------------- #
 
 def fig_f1_by_regime(models, data, outdir, dpi):
-    fig, ax = plt.subplots(figsize=(8.0, 4.2))
+    fig, ax = plt.subplots(figsize=(20, 10))
     grouped_bar(ax, models, data,
-                lambda r: r["quality"]["operation_f1"], "Operation F1")
-    ax.set_ylim(0, 1.08)
-    ax.legend(ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.14))
+                lambda r: r["quality"]["operation_f1"], "Operation F1", y_min=0.4)
+    ax.set_ylim(0.4, 1.08)
+    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
     save(fig, outdir, "f1_by_regime", dpi)
 
 
-def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True):
-    fig, ax = plt.subplots(figsize=(8.2, 5.2))
+def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0.03):
+    fig, ax = plt.subplots(figsize=(14, 9))
     f1 = lambda r: r["quality"]["operation_f1"]
 
     for m in models:
@@ -238,7 +300,7 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True):
         ax.annotate(label_for(m, data),
                     (x_fn(data[m][anchor]), f1(data[m][anchor])),
                     textcoords="offset points", xytext=(dx, dy),
-                    fontsize=8, ha="center")
+                    fontsize=16, ha="center")
 
     if logx:
         ax.set_xscale("log")
@@ -246,9 +308,9 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True):
         ax.set_xlim(min(all_x) * 0.6, max(all_x) * 1.7)  # padding so edge labels don't clip
     ax.set_xlabel(xlabel)
     ax.set_ylabel("Operation F1")
-    ax.set_ylim(-0.03, 1.05)
+    ax.set_ylim(y_min, 1.05)
     ax.grid(True, which="both", alpha=0.3)
-    ax.legend(loc="lower right", title="Prompt")
+    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), title="Prompt")
     save(fig, outdir, name, dpi)
 
 
@@ -261,49 +323,61 @@ def fig_quality_cost(models, data, outdir, dpi):
 def fig_latency_f1(models, data, outdir, dpi):
     _tradeoff(models, data, lambda r: r["performance"]["latency_seconds"]["mean"],
               "Mean latency per command (s, log scale)",
-              "latency_f1_tradeoff", outdir, dpi)
+              "latency_f1_tradeoff", outdir, dpi, y_min=0.4)
 
 
-def _metric_grid(models, data, metrics, name, outdir, dpi, ncols=4):
-    nrows = math.ceil(len(metrics) / ncols)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3.5, nrows * 3.1))
-    axes = np.atleast_1d(axes).flatten()
-    for ax, (label, fn) in zip(axes, metrics):
-        grouped_bar(ax, models, data, fn, label)
-        ax.set_title(label)
-        ax.set_ylabel("")
-        ax.tick_params(axis="x", labelsize=7)
-    for ax in axes[len(metrics):]:
-        ax.axis("off")
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, ncol=3, loc="upper center",
-               bbox_to_anchor=(0.5, 1.02))
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
-    save(fig, outdir, name, dpi)
+def fig_metric_by_regime(models, data, label, value_fn, name, outdir, dpi):
+    # These per-metric charts sit at half text-width inside the paper's figure
+    # grids, so on-bar value labels are dropped (the exact numbers live in
+    # Tables 1-2) and the tick fonts are reduced so the six model names fit
+    # without colliding. The large single charts (e.g. f1_by_regime) keep the
+    # big black value labels via the global style.
+    with plt.rc_context({
+        "axes.labelsize": 32,
+        "xtick.labelsize": 20,
+        "ytick.labelsize": 24,
+        "legend.fontsize": 24,
+    }):
+        fig, ax = plt.subplots(figsize=(18, 8))
+        grouped_bar(ax, models, data, value_fn, label, annotate_values=False)
+        if label.strip().lower() != ax.get_ylabel().strip().lower():
+            ax.set_title(label)
+        ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
+        save(fig, outdir, name, dpi)
 
 
-def fig_quality_grid(models, data, outdir, dpi):
-    _metric_grid(models, data, QUALITY_METRICS, "quality_metrics_grid", outdir, dpi)
+def fig_quality_metrics(models, data, outdir, dpi):
+    for label, fn in QUALITY_METRICS:
+        name = f"quality_{metric_slug(label)}_by_regime"
+        fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
 
 
-def fig_cost_grid(models, data, outdir, dpi):
-    _metric_grid(models, data, COST_METRICS, "cost_metrics_grid", outdir, dpi)
+def fig_cost_metrics(models, data, outdir, dpi):
+    for label, fn in COST_METRICS:
+        name = f"cost_{metric_slug(label)}_by_regime"
+        fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
 
 
 def fig_tokens(models, data, outdir, dpi):
-    """Prompt vs output tokens per regime - the driver of the decode-bound cost."""
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.2), sharex=True)
-    grouped_bar(ax1, models, data,
-                lambda r: r["performance"]["tokens"]["prompt_eval_count_avg"],
-                "Mean prompt tokens")
-    ax1.set_title("Prompt (input) tokens")
-    grouped_bar(ax2, models, data,
-                lambda r: r["performance"]["tokens"]["eval_count_avg"],
-                "Mean output tokens")
-    ax2.set_title("Output (decoded) tokens")
-    ax1.legend(ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.18))
-    fig.tight_layout()
-    save(fig, outdir, "tokens_by_regime", dpi)
+    """Prompt/output token plots written as separate files."""
+    fig_metric_by_regime(
+        models,
+        data,
+        "Mean prompt tokens",
+        lambda r: r["performance"]["tokens"]["prompt_eval_count_avg"],
+        "prompt_tokens_by_regime",
+        outdir,
+        dpi,
+    )
+    fig_metric_by_regime(
+        models,
+        data,
+        "Mean output tokens",
+        lambda r: r["performance"]["tokens"]["eval_count_avg"],
+        "output_tokens_by_regime",
+        outdir,
+        dpi,
+    )
 
 # --------------------------------------------------------------------------- #
 # Optional: dump the tidy table that backs the figures (handy for the paper)
@@ -334,9 +408,9 @@ def dump_table(models, data, outdir):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--results", default="Results", help="directory of per-model results")
+    ap.add_argument("--results", default="responses", help="directory of per-model results")
     ap.add_argument("--outdir", default="figures", help="where to write the figures")
-    ap.add_argument("--dpi", type=int, default=300, help="raster (PNG) resolution")
+    ap.add_argument("--dpi", type=int, default=800, help="raster (PNG) resolution")
     ap.add_argument("--no-table", action="store_true", help="skip summary_table.csv")
     args = ap.parse_args()
 
@@ -348,8 +422,8 @@ def main():
     fig_f1_by_regime(models, data, args.outdir, args.dpi)
     fig_quality_cost(models, data, args.outdir, args.dpi)
     fig_latency_f1(models, data, args.outdir, args.dpi)
-    fig_quality_grid(models, data, args.outdir, args.dpi)
-    fig_cost_grid(models, data, args.outdir, args.dpi)
+    fig_quality_metrics(models, data, args.outdir, args.dpi)
+    fig_cost_metrics(models, data, args.outdir, args.dpi)
     fig_tokens(models, data, args.outdir, args.dpi)
     if not args.no_table:
         dump_table(models, data, args.outdir)
