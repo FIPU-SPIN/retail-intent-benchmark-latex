@@ -244,10 +244,10 @@ In our previous research, we explored the "optimization dilemma" of structured p
 Based on the cumulative evidence from these studies, a critical gap remains in quantifying the exact hardware and latency costs of pure inference-time prompting when applied to highly complex, compound-intent inputs. While previous works have examined isolated intents or heavily orchestrated fine-tuning pipelines, the goal of this current study is to examine how distinct prompting archetypes influence both structured output reliability and physical hardware consumption. Guided by prior literature, the following hypotheses are considered:
 
 \begin{itemize}
-    \item \textbf{H1:} Advanced prompt engineering paradigms, specifically those utilizing complex Few-Shot exemplars, will significantly improve multi-intent extraction accuracy and schema validity compared to minimal prompts across all evaluated model scales.
-    \item \textbf{H2:} The structural and semantic accuracy gains achieved through extended context prompting will incur a measurable, non-linear increase in inference latency, peak VRAM allocation, and GPU power consumption.
-    \item \textbf{H3:} Semantic mapping failures (e.g., incorrect value extraction or hallucinated intents) will persist more frequently in ultra-compact edge models ($\le$ 3B parameters) despite advanced prompting, reflecting inherent limitations in compound reasoning compared to larger open-weights architectures.
-    \item \textbf{H4:} Mid-tier local models (e.g., 7B to 8B parameters) utilizing advanced prompting will demonstrate the optimal cost-benefit ratio, bridging the structural capabilities of larger models while maintaining operational footprints suitable for edge deployment.
+    \item H1: Advanced prompt engineering paradigms, specifically those utilizing complex Few-Shot exemplars, will significantly improve multi-intent extraction accuracy and schema validity compared to minimal prompts across all evaluated model scales.
+    \item H2: The structural and semantic accuracy gains achieved through extended context prompting will incur a measurable, non-linear increase in inference latency, peak VRAM allocation, and GPU power consumption.
+    \item H3: Semantic mapping failures (e.g., incorrect value extraction or hallucinated intents) will persist more frequently in ultra-compact edge models ($\le$ 3B parameters) despite advanced prompting, reflecting inherent limitations in compound reasoning compared to larger open-weights architectures.
+    \item H4: Mid-tier local models (e.g., 7B to 8B parameters) utilizing advanced prompting will demonstrate the optimal cost-benefit ratio, bridging the structural capabilities of larger models while maintaining operational footprints suitable for edge deployment.
 \end{itemize}
 
 This paper consists of six main sections. Section 1 introduces the research problem and operational motivation. Section 2 reviews related work on local large language models and structured data extraction. Section 3 describes the empirical methodology, detailing the multi-intent dataset, prompt variants, evaluated model continuum, and hardware profiling metrics. Section 4 presents the experimental results across both parsing accuracy and hardware efficiency axes. Section 5 synthesizes the findings, discusses the limitations of the evaluation, and outlines pathways for future research. Finally, Section 6 summarizes the core conclusions of the study.
@@ -255,11 +255,11 @@ This paper consists of six main sections. Section 1 introduces the research prob
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Methodology}
 
-We evaluate local large language models on a single structured-extraction task using a \emph{dual-axis} protocol that scores every model on both extraction quality and computational cost. The task, dataset, and serving stack are held fixed; only the model and the prompting regime vary. No model is fine-tuned---all are used off-the-shelf through in-context prompting---so the study isolates the behaviour of pretrained open-weights models under realistic, low-effort local deployment. The remainder of this section defines the extraction task (Section~\ref{sec:task}), the evaluation corpus (Section~\ref{sec:data}), the model pool (Section~\ref{sec:models}), the three prompting regimes (Section~\ref{sec:prompts}), the inference and measurement protocol (Section~\ref{sec:protocol}), and the quality and cost metrics (Section~\ref{sec:metrics}). The prompts are reproduced verbatim in Appendix~\ref{app:prompts}.
+We evaluate local large language models on a single structured-extraction task using a dual-axis protocol that scores every model on both extraction quality and computational cost. The task, dataset, and serving stack are held fixed; only the model and the prompting regime vary. No model is fine-tuned---all are used off-the-shelf through in-context prompting---so the study isolates the behaviour of pretrained open-weights models under realistic, low-effort local deployment. The remainder of this section defines the extraction task (Section~\ref{sec:task}), the evaluation corpus (Section~\ref{sec:data}), the model pool (Section~\ref{sec:models}), the three prompting regimes (Section~\ref{sec:prompts}), the inference and measurement protocol (Section~\ref{sec:protocol}), and the quality and cost metrics (Section~\ref{sec:metrics}). The prompts are reproduced verbatim in Appendix~\ref{app:prompts}.
 
 \subsection{Task Formulation}\label{sec:task}
 
-Given a single natural-language utterance addressed to a shopping assistant, a model must return the set of cart operations the utterance encodes. Each operation is a triple $(\textit{action},\textit{product},\textit{quantity})$ in which $\textit{action}\in\{\texttt{add},\texttt{remove}\}$, $\textit{product}$ is the product name as it appears in the utterance (with action verbs and numerals removed), and $\textit{quantity}\in\mathbb{Z}_{\ge 1}$, defaulting to $1$ when the user gives no number. The required output is a JSON array of such triples, for example \texttt{[\{"action":"add","product":"pies","quantity":20\}]}. The task is intentionally demanding along three dimensions: (i)~one utterance bundles several operations that must be jointly segmented and recovered; (ii)~intent is conveyed through open-ended synonyms (``toss in'', ``ring up'', ``nix'', ``take out'') that must be collapsed onto the two canonical actions; and (iii)~quantities are written as digits, number words, and idioms---``a pair'' $\rightarrow 2$, ``half a dozen'' $\rightarrow 6$, ``two dozen'' $\rightarrow 24$---that must be normalised to integers. A correct response therefore couples intent classification, verbatim span extraction, and quantity normalisation, emitted as schema-conformant JSON in a single forward pass.
+Given a single natural-language utterance addressed to a shopping assistant, a model must return the set of cart operations the utterance encodes. Each operation is a triple $(action,product,quantity)$ in which $action\in\{\texttt{add},\texttt{remove}\}$, $product$ is the product name as it appears in the utterance (with action verbs and numerals removed), and $quantity\in\mathbb{Z}_{\ge 1}$, defaulting to $1$ when the user gives no number. The required output is a JSON array of such triples, for example \texttt{[\{"action":"add","product":"pies","quantity":20\}]}. The task is intentionally demanding along three dimensions: (i)~one utterance bundles several operations that must be jointly segmented and recovered; (ii)~intent is conveyed through open-ended synonyms (``toss in'', ``ring up'', ``nix'', ``take out'') that must be collapsed onto the two canonical actions; and (iii)~quantities are written as digits, number words, and idioms---``a pair'' $\rightarrow 2$, ``half a dozen'' $\rightarrow 6$, ``two dozen'' $\rightarrow 24$---that must be normalised to integers. A correct response therefore couples intent classification, verbatim span extraction, and quantity normalisation, emitted as schema-conformant JSON in a single forward pass.
 
 \subsection{Evaluation Corpus}\label{sec:data}
 
@@ -272,7 +272,7 @@ Table~\ref{tab:dataset} summarises the corpus. It spans 149 distinct retail prod
 \footnotesize
 \begin{tabularx}{\textwidth}{l *{4}{C} C}
 \toprule
-\textbf{Operations per command} & \textbf{2} & \textbf{3} & \textbf{4} & \textbf{5} & \textbf{Total} \\
+Operations per command & 2 & 3 & 4 & 5 & Total \\
 \midrule
 Commands & 427 & 1840 & 1864 & 869 & 5000 \\
 Share (\%) & 8.5 & 36.8 & 37.3 & 17.4 & 100.0 \\
@@ -284,16 +284,13 @@ Share (\%) & 8.5 & 36.8 & 37.3 & 17.4 & 100.0 \\
 
 We benchmark six open-weights, instruction-tuned models that span roughly an order of magnitude in scale (from 3B to 31B parameters) and five families---Meta Llama, Google Gemma, Mistral, IBM Granite, and OpenAI gpt-oss (Table~\ref{tab:models}). Every model was obtained from the Ollama library using its default tag and the default quantization published for that tag (predominantly 4-bit; gpt-oss in its native MXFP4 format); none was re-quantized or fine-tuned. This reproduces the configuration a practitioner obtains from a single \texttt{ollama pull}, which is precisely the low-effort, on-premises deployment scenario the paper targets.
 
-% NOTE: gemma4:31b and granite4:3b are reproduced as the exact Ollama tags run by the authors;
-% parameter counts are taken from the tag size. Please double-check the developer/family for these two rows.
-% Optional: add a "Quant." column with the exact scheme per tag from `ollama show <tag> --modelfile`
-% (the ~45.8 GB VRAM for gemma4:31b suggests it may not be 4-bit).
+
 \begin{table}[H]
 \caption{Evaluated models, all served through Ollama (v0.21.2-rc0) using the default tag and quantization. Parameter counts are the nominal sizes indicated by the model tag; ``MoE'' marks a mixture-of-experts model.\label{tab:models}}
 \footnotesize
 \begin{tabularx}{\textwidth}{l X l l}
 \toprule
-\textbf{Ollama tag} & \textbf{Developer / family} & \textbf{Params} & \textbf{Architecture} \\
+Ollama tag & Developer / family & Params & Architecture \\
 \midrule
 \texttt{gemma4:31b} & Google / Gemma & 31B & Dense \\
 \texttt{gpt-oss:20b} & OpenAI / gpt-oss & 20B & MoE \\
@@ -307,7 +304,7 @@ We benchmark six open-weights, instruction-tuned models that span roughly an ord
 
 \subsection{Prompting Regimes}\label{sec:prompts}
 
-Each model is run under three system prompts of increasing specification while the user turn (the raw command) is held identical, so that any difference in output is attributable to the prompt alone. The \emph{minimal} prompt states the task and the three output fields in a few lines. The \emph{extended} prompt adds explicit instructions---chiefly that synonymous verbs must be mapped onto \texttt{add}/\texttt{remove} and that an unspecified quantity defaults to one---but gives no examples. The \emph{few-shot} prompt instead pairs the schema with three worked input--output exemplars that demonstrate synonym mapping, idiomatic-quantity normalisation (``a pair'' $\rightarrow 2$, ``a dozen'' $\rightarrow 12$), and the single-item default. Contrasting minimal with extended isolates the marginal value of \emph{instruction detail}, whereas contrasting extended with few-shot isolates the marginal value of \emph{in-context demonstration}. The full prompt texts appear in Appendix~\ref{app:prompts}.
+Each model is run under three system prompts of increasing specification while the user turn (the raw command) is held identical, so that any difference in output is attributable to the prompt alone. The minimal prompt states the task and the three output fields in a few lines. The extended prompt adds explicit instructions---chiefly that synonymous verbs must be mapped onto \texttt{add}/\texttt{remove} and that an unspecified quantity defaults to one---but gives no examples. The few-shot prompt instead pairs the schema with three worked input--output exemplars that demonstrate synonym mapping, idiomatic-quantity normalisation (``a pair'' $\rightarrow 2$, ``a dozen'' $\rightarrow 12$), and the single-item default. Contrasting minimal with extended isolates the marginal value of instruction detail, whereas contrasting extended with few-shot isolates the marginal value of in-context demonstration. The full prompt texts appear in Appendix~\ref{app:prompts}.
 
 \subsection{Inference and Measurement Protocol}\label{sec:protocol}
 
@@ -319,18 +316,18 @@ For every request we record the wall-clock latency around the generation call, t
 
 Each configuration is scored on a quality axis and a cost axis, both computed directly from the stored responses.
 
-\textbf{Response parsing.} Output is first reduced to operations by a lenient parser: we attempt a direct JSON parse and, on failure, extract the longest bracket-delimited substring (first \texttt{[} to last \texttt{]}, or first \texttt{\{} to last \texttt{\}}) and re-parse. This tolerates incidental wrapping such as prose preambles or Markdown code fences, so JSON validity credits any response from which a structured payload can be recovered; the schema and content metrics below then impose the stricter requirements.
+Response parsing. Output is first reduced to operations by a lenient parser: we attempt a direct JSON parse and, on failure, extract the longest bracket-delimited substring (first \texttt{[} to last \texttt{]}, or first \texttt{\{} to last \texttt{\}}) and re-parse. This tolerates incidental wrapping such as prose preambles or Markdown code fences, so JSON validity credits any response from which a structured payload can be recovered; the schema and content metrics below then impose the stricter requirements.
 
-\textbf{Quality metrics.} (i)~\emph{JSON validity}---the fraction of responses yielding a parseable payload. (ii)~\emph{Schema validity}---the fraction whose parsed operations are all well-typed objects carrying exactly the keys \texttt{action} ($\in\{\texttt{add},\texttt{remove}\}$), \texttt{product} (string), and \texttt{quantity} (integer); an empty result is invalid. (iii)~\emph{Operation-level micro-averaged F1} (Op-F1), the primary quality scalar: each operation is treated as the exact triple $(\textit{action},\textit{product},\textit{quantity})$, and for each command we take the multiset overlap of predicted and gold operations, accumulating true positives, false positives, and false negatives over the entire corpus before computing a single micro-averaged precision, recall, and F1. Op-F1 is order-independent but requires all three fields to match exactly. (iv)~\emph{Exact match} (EM)---the fraction of commands whose predicted operation list equals the gold list exactly and in order, a strict whole-utterance criterion. (v)~\emph{Field accuracies} for action, product, and quantity---predicted and gold operations are aligned by position up to the longer length, and we report the fraction of aligned slots whose field agrees; being position-aligned, these conflate ordering and count errors with genuine field errors and are reported only as a diagnostic decomposition.
+Quality metrics. (i)~JSON validity---the fraction of responses yielding a parseable payload. (ii)~Schema validity---the fraction whose parsed operations are all well-typed objects carrying exactly the keys \texttt{action} ($\in\{\texttt{add},\texttt{remove}\}$), \texttt{product} (string), and \texttt{quantity} (integer); an empty result is invalid. (iii)~Operation-level micro-averaged F1 (Op-F1), the primary quality scalar: each operation is treated as the exact triple $(action,product,quantity)$, and for each command we take the multiset overlap of predicted and gold operations, accumulating true positives, false positives, and false negatives over the entire corpus before computing a single micro-averaged precision, recall, and F1. Op-F1 is order-independent but requires all three fields to match exactly. (iv)~Exact match (EM)---the fraction of commands whose predicted operation list equals the gold list exactly and in order, a strict whole-utterance criterion. (v)~Field accuracies for action, product, and quantity---predicted and gold operations are aligned by position up to the longer length, and we report the fraction of aligned slots whose field agrees; being position-aligned, these conflate ordering and count errors with genuine field errors and are reported only as a diagnostic decomposition.
 
-\textbf{Cost metrics.} Per configuration we report latency (mean, median, and 95th percentile, in seconds), throughput (commands per second over the run), mean GPU power (W, averaged over the two GPUs), per-command energy ($E\approx\bar{P}\,\bar{t}$, J), mean resident VRAM (GB, summed over both GPUs), and the mean prompt- and output-token counts. For the trade-off analysis (Section~\ref{sec:tradeoff}) quality is summarised by Op-F1 and cost by energy per command, the two scalars that anchor the Pareto comparison.
+Cost metrics. Per configuration we report latency (mean, median, and 95th percentile, in seconds), throughput (commands per second over the run), mean GPU power (W, averaged over the two GPUs), per-command energy ($E\approx\bar{P}\,\bar{t}$, J), mean resident VRAM (GB, summed over both GPUs), and the mean prompt- and output-token counts. For the trade-off analysis (Section~\ref{sec:tradeoff}) quality is summarised by Op-F1 and cost by energy per command, the two scalars that anchor the Pareto comparison.
 
-\textbf{Generative-AI disclosure.} In accordance with MDPI policy, we disclose that generative AI was used in a single part of this study---to synthesise the evaluation corpus (Section~\ref{sec:data})---and nowhere else; model evaluation, measurement, analysis, and manuscript preparation used no generative-AI assistance beyond superficial text editing.
+Generative-AI disclosure. In accordance with MDPI policy, we disclose that generative AI was used in a single part of this study---to synthesise the evaluation corpus (Section~\ref{sec:data})---and nowhere else; model evaluation, measurement, analysis, and manuscript preparation used no generative-AI assistance beyond superficial text editing.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results and Discussion}
 
-We evaluate six open-weights models under three prompting regimes---\emph{minimal}, \emph{extended}, and \emph{few-shot}---yielding 18 model--prompt configurations, each applied to the full set of 5000 shopping-cart commands. These commands contain a mean of 3.64 atomic operations (18{,}175 gold operations in total), so a single utterance typically bundles several add/remove intents that must be jointly recovered. Following the dual-axis protocol introduced in the Methodology, we report extraction quality (Table~\ref{tab:quality}) and computational cost (Table~\ref{tab:cost}) for every configuration, and then analyse the quality--cost trade-off that the prompting regime induces (Figure~\ref{fig:tradeoff}). Throughout, we use the operation-level micro-averaged F1 score (Op-F1) as the primary quality scalar and an estimated energy per command, $E \approx \bar{P}\,\bar{t}$ (mean GPU power $\times$ mean latency), as the primary cost scalar.
+We evaluate six open-weights models under three prompting regimes---minimal, extended, and few-shot---yielding 18 model--prompt configurations, each applied to the full set of 5000 shopping-cart commands. These commands contain a mean of 3.64 atomic operations (18{,}175 gold operations in total), so a single utterance typically bundles several add/remove intents that must be jointly recovered. Following the dual-axis protocol introduced in the Methodology, we report extraction quality (Table~\ref{tab:quality}) and computational cost (Table~\ref{tab:cost}) for every configuration, and then analyse the quality--cost trade-off that the prompting regime induces (Figure~\ref{fig:tradeoff}). Throughout, we use the operation-level micro-averaged F1 score (Op-F1) as the primary quality scalar and an estimated energy per command, $E \approx \bar{P}\,\bar{t}$ (mean GPU power $\times$ mean latency), as the primary cost scalar.
 
 \subsection{Extraction Quality and the Role of the Prompting Regime}
 
@@ -343,31 +340,31 @@ We evaluate six open-weights models under three prompting regimes---\emph{minima
 \footnotesize
 \begin{tabularx}{\textwidth}{l l *{4}{C}}
 \toprule
-\textbf{Model} & \textbf{Prompt} & \textbf{JSON} & \textbf{Schema} & \textbf{Op-F1} & \textbf{EM} \\
+Model & Prompt & JSON & Schema & Op-F1 & EM \\
 \midrule
 \multirow{3}{*}{Gemma4 31B} & Min & 1.000 & 1.000 & 0.951 & 0.833 \\
  & Ext & 1.000 & 1.000 & 0.967 & 0.885 \\
- & FS & 1.000 & 1.000 & \textbf{0.981} & 0.933 \\
+ & FS & 1.000 & 1.000 & 0.981 & 0.933 \\
 \midrule
 \multirow{3}{*}{GPT-OSS 20B} & Min & 1.000 & 1.000 & 0.923 & 0.753 \\
  & Ext & 0.999 & 0.999 & 0.944 & 0.819 \\
- & FS & 1.000 & 1.000 & \textbf{0.975} & 0.915 \\
+ & FS & 1.000 & 1.000 & 0.975 & 0.915 \\
 \midrule
 \multirow{3}{*}{Llama3.1 8B} & Min & 0.935 & 0.881 & 0.782 & 0.538 \\
  & Ext & 0.998 & 0.976 & 0.801 & 0.568 \\
- & FS & 0.997 & 0.995 & \textbf{0.950} & 0.841 \\
+ & FS & 0.997 & 0.995 & 0.950 & 0.841 \\
 \midrule
 \multirow{3}{*}{Mistral 7B} & Min & 0.963 & 0.877 & 0.689 & 0.357 \\
  & Ext & 0.982 & 0.865 & 0.504 & 0.281 \\
- & FS & 0.993 & 0.976 & \textbf{0.942} & 0.804 \\
+ & FS & 0.993 & 0.976 & 0.942 & 0.804 \\
 \midrule
 \multirow{3}{*}{Granite4 3B} & Min & 1.000 & 0.928 & 0.797 & 0.512 \\
  & Ext & 1.000 & 0.931 & 0.790 & 0.516 \\
- & FS & 1.000 & 0.997 & \textbf{0.937} & 0.807 \\
+ & FS & 1.000 & 0.997 & 0.937 & 0.807 \\
 \midrule
 \multirow{3}{*}{Llama3.2 3B} & Min & 0.967 & 0.606 & 0.610 & 0.311 \\
  & Ext & 0.970 & 0.637 & 0.526 & 0.229 \\
- & FS & 0.890 & 0.822 & \textbf{0.813} & 0.566 \\
+ & FS & 0.890 & 0.822 & 0.813 & 0.566 \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -438,7 +435,7 @@ In contrast, the extended (instruction-rich) prompt is not a monotonic improveme
 \setlength{\tabcolsep}{4pt}
 \begin{tabularx}{\textwidth}{l l *{8}{C}}
 \toprule
-\textbf{Model} & \textbf{Prompt} & \textbf{Lat$_{\mathrm{med}}$} & \textbf{Lat$_{\mathrm{mean}}$} & \textbf{Lat$_{\mathrm{p95}}$} & \textbf{Thr} & \textbf{Pwr} & \textbf{$E$ (J)} & \textbf{P-tok} & \textbf{E-tok} \\
+Model & Prompt & Lat$_{\mathrm{med}}$ & Lat$_{\mathrm{mean}}$ & Lat$_{\mathrm{p95}}$ & Thr & Pwr & $E$ (J) & P-tok & E-tok \\
 \midrule
 \multirow{3}{*}{Gemma4 31B} & Min & 13.03 & 16.33 & 37.24 & 0.06 & 156 & 2555 & 146 & 600 \\
  & Ext & 13.25 & 16.27 & 36.62 & 0.06 & 156 & 2545 & 197 & 599 \\
@@ -478,7 +475,7 @@ The cost profile is governed by decoding rather than prefill. Although few-shot 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\linewidth]{figures/output_tokens_by_regime.pdf}
-\caption{Mean output (decoded) tokens per command, by model and prompting regime. Despite the longer input, few-shot prompting yields \emph{shorter} output: the demonstrations elicit concise, minified JSON and suppress verbose generation. Because decoding dominates latency, this reduction in output tokens is the mechanism behind the lower few-shot latency and energy reported in Table~\ref{tab:cost}.\label{fig:otokens}}
+\caption{Mean output (decoded) tokens per command, by model and prompting regime. Despite the longer input, few-shot prompting yields shorter output: the demonstrations elicit concise, minified JSON and suppress verbose generation. Because decoding dominates latency, this reduction in output tokens is the mechanism behind the lower few-shot latency and energy reported in Table~\ref{tab:cost}.\label{fig:otokens}}
 \end{figure}
 
 GPU power draw is essentially model-bound rather than prompt-bound---within each model it varies by only a few watts across regimes (e.g., ${\sim}156$~W for Gemma4 31B, ${\sim}124$~W for GPT-OSS 20B, ${\sim}118$~W for Granite4 3B)---so the estimated energy per command tracks latency (Figure~\ref{fig:gpupower}). Few-shot prompting therefore reduces per-command energy by 19--36\% for the capable models, with the smallest models reaching 46~J (Granite4 3B) and 47~J (Llama3.2 3B) per command versus 315~J (GPT-OSS 20B) and 1820~J (Gemma4 31B). Energy spans a factor of roughly 40 across the frontier---a far wider dynamic range than quality---which is the crux of the deployment trade-off analysed in Section~\ref{sec:tradeoff}.
@@ -503,9 +500,9 @@ We report mean VRAM occupancy in the underlying logs for completeness but cautio
 Figure~\ref{fig:tradeoff} plots every configuration in the energy--quality plane and reveals the central finding of this study: for capable models, few-shot prompting is Pareto-improving rather than Pareto-trading---it moves each model up (higher F1) and to the left (lower energy) at once. The few-shot points dominate their own minimal and extended counterparts for all six models. The genuine trade-off is therefore not between prompts but across model scale: along the few-shot frontier, quality and cost are positively coupled, and the practitioner's decision reduces to selecting an operating point on that frontier. Three operating points are practically distinct:
 
 \begin{itemize}[leftmargin=*,topsep=2pt,itemsep=2pt]
-\item \textbf{Maximum accuracy.} Gemma4 31B (few-shot) attains the highest fidelity (Op-F1 0.981, exact match 0.933) but at 1820~J and 11.7~s per command---appropriate only where accuracy is paramount and latency and energy are unconstrained, such as offline or server-side processing.
-\item \textbf{Balanced.} GPT-OSS 20B (few-shot) reaches Op-F1 0.975 at 315~J and 2.5~s, a 5.8$\times$ energy reduction for a 0.6-point F1 loss relative to Gemma4 31B.
-\item \textbf{Efficiency frontier.} Granite4 3B (few-shot) achieves Op-F1 0.937---95.5\% of Gemma4 31B's quality---at 46~J and 0.39~s, that is, roughly 40$\times$ less energy and 30$\times$ lower latency. Llama3.1 8B (0.950, 79~J) and Mistral 7B (0.942, 70~J) offer marginally higher accuracy at modestly higher cost.
+\item Maximum accuracy. Gemma4 31B (few-shot) attains the highest fidelity (Op-F1 0.981, exact match 0.933) but at 1820~J and 11.7~s per command---appropriate only where accuracy is paramount and latency and energy are unconstrained, such as offline or server-side processing.
+\item Balanced. GPT-OSS 20B (few-shot) reaches Op-F1 0.975 at 315~J and 2.5~s, a 5.8$\times$ energy reduction for a 0.6-point F1 loss relative to Gemma4 31B.
+\item Efficiency frontier. Granite4 3B (few-shot) achieves Op-F1 0.937---95.5\% of Gemma4 31B's quality---at 46~J and 0.39~s, that is, roughly 40$\times$ less energy and 30$\times$ lower latency. Llama3.1 8B (0.950, 79~J) and Mistral 7B (0.942, 70~J) offer marginally higher accuracy at modestly higher cost.
 \end{itemize}
 
 Quality saturates rapidly with scale once few-shot prompting is applied: moving from a 3B to a 31B model improves Op-F1 by only ${\sim}0.044$ while increasing energy by a factor of roughly 40. For the resource-constrained, edge-oriented retail setting that motivates this work, a 3--8B model with few-shot prompting is therefore the rational default, reserving 20--31B models for accuracy-critical or server-side deployments. Crucially, this recommendation is contingent on the prompt: the same small models are not viable under minimal or extended prompting (Op-F1 0.50--0.80), so the deployment win arises from the prompt--model pairing rather than from the model alone. The same Pareto structure holds when mean latency replaces energy on the cost axis (Table~\ref{tab:cost}), confirming that the ranking of configurations is robust to the choice of cost metric.
@@ -523,7 +520,7 @@ Field-level accuracies localise the residual errors. Product-span extraction is 
 
 We presented a dual-axis benchmark of six open-weights large language models, served entirely on local hardware, for the structured extraction of shopping-cart operations from idiomatic, multi-intent commands. Across 18 model--prompt configurations evaluated on 5000 commands, we jointly quantified extraction quality (operation-level F1, exact match, and schema validity) and the computational cost of inference (latency, throughput, GPU power, energy, and VRAM), so that accuracy and deployability are weighed on the same footing.
 
-Three findings stand out. First, in-context demonstration is the single most effective intervention: few-shot prompting produced the best operation-level F1 for every model, and its benefit was inversely proportional to a model's zero-shot competence, compressing the quality gap between the smallest and largest models from wide to marginal. The dominant failure mode of the smaller models under weaker prompts was structural---schema-violating JSON rather than malformed text or incorrect content---and exemplars repaired it almost entirely, indicating that the output contract is conveyed far more reliably by example than by description. Second, longer instructions are not a free improvement: the instruction-rich \emph{extended} prompt degraded several smaller models by inducing over-normalisation of product spans and idiomatic quantities, a negative result that cautions against scaling prompt complexity without grounding it in examples. Third, on this task richer prompting is not more expensive but \emph{cheaper}: because decoding dominates latency and the demonstrations suppress verbose generation, few-shot prompting simultaneously raised accuracy and lowered per-command latency and energy, inverting the common assumption that better prompts cost more compute. GPU power, by contrast, was essentially model-bound, so energy per command tracked latency rather than prompt length.
+Three findings stand out. First, in-context demonstration is the single most effective intervention: few-shot prompting produced the best operation-level F1 for every model, and its benefit was inversely proportional to a model's zero-shot competence, compressing the quality gap between the smallest and largest models from wide to marginal. The dominant failure mode of the smaller models under weaker prompts was structural---schema-violating JSON rather than malformed text or incorrect content---and exemplars repaired it almost entirely, indicating that the output contract is conveyed far more reliably by example than by description. Second, longer instructions are not a free improvement: the instruction-rich extended prompt degraded several smaller models by inducing over-normalisation of product spans and idiomatic quantities, a negative result that cautions against scaling prompt complexity without grounding it in examples. Third, on this task richer prompting is not more expensive but cheaper: because decoding dominates latency and the demonstrations suppress verbose generation, few-shot prompting simultaneously raised accuracy and lowered per-command latency and energy, inverting the common assumption that better prompts cost more compute. GPU power, by contrast, was essentially model-bound, so energy per command tracked latency rather than prompt length.
 
 Taken together, these results reframe the deployment decision. Because few-shot prompting is Pareto-improving rather than Pareto-trading, the operative choice is not which prompt to use---few-shot, always---but where to sit on the few-shot quality--cost frontier. Along that frontier quality saturates quickly while cost does not: moving from a 3B to a 31B model improves operation F1 by only ${\sim}0.044$ yet increases energy per command roughly fortyfold. For the resource-constrained, edge-oriented retail automation that motivates this work, a 3--8B model paired with few-shot prompting is therefore the rational default---Granite4 3B, for instance, recovers 95.5\% of the 31B model's quality at ${\sim}40\times$ less energy and ${\sim}30\times$ lower latency---with larger models reserved for accuracy-critical or server-side processing. Crucially, this efficiency is a property of the prompt--model \emph{pairing} and not of the model alone, since the same small models are not viable under minimal or extended prompting. Beyond the specific rankings, the study contributes a reusable, energy-aware evaluation protocol and an empirical baseline for deploying cost-effective local LLMs in conversational commerce; extending it to broader retail intents, multilingual commands, and constrained-decoding methods that enforce schema validity directly are promising directions for future work.
 
