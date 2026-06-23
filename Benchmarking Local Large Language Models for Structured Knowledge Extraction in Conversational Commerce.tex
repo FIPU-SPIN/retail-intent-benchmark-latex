@@ -104,12 +104,13 @@
 % Author Orchid ID: enter ID or remove command
 \newcommand{\orcidauthorA}{0009-0004-4210-5756} % Add \orcidA{} behind the author's name
 \newcommand{\orcidauthorB}{0009-0002-1965-7822}%Luka
-\newcommand{\orcidauthorC}{0000-0002-3015-1024}%Sandi
-\newcommand{\orcidauthorD}{0000-0003-0323-2600}%Vedran
-\newcommand{\orcidauthorE}{0000-0002-5964-245X}%Ivan
+\newcommand{\orcidauthorC}{0009-0000-9740-7381}%Marijela
+\newcommand{\orcidauthorD}{0000-0002-3015-1024}%Sandi
+\newcommand{\orcidauthorE}{0000-0003-0323-2600}%Vedran
+\newcommand{\orcidauthorF}{0000-0002-5964-245X}%Ivan
 
 % Authors, for the paper (add full first names)
-\Author{Ratomir Karlović $^{1}$\orcidA{}, Luka Sever $^{1}$\orcidB{}, Sandi Baressi Šegota $^{1}$\orcidC{}, Vedran Mrzljak$^{2}$\orcidD{} and Ivan Lorencin $^{1}$\orcidE{}}
+\Author{Ratomir Karlović $^{1}$\orcidA{}, Luka Sever $^{1}$\orcidB{}, Marijela Miličević $^{1}$\orcidC{}, Sandi Baressi Šegota $^{1}$\orcidD{}, Vedran Mrzljak$^{2}$\orcidE{} and Ivan Lorencin $^{1}$\orcidF{}}
 
 %\longauthorlist{yes}
 
@@ -120,7 +121,7 @@
 
 % Affiliations / Addresses (Add [1] after \address if there is only one affiliation.)
 \address{%
-$^{1}$ \quad Faculty of Informatics, Juraj Dobrila University of Pula, Zagrebačka 30, 52100 Pula, Croatia;\\ ratomir.karlovic@unipu.hr (R.K.), luka.sever@unipu.hr (L.S.), sandi.baressi.segota@unipu.hr (S.B.Š.), ivan.lorencin@unipu.hr (I.L.)\\ $^{2}$ \quad Faculty of Engineering Rijeka, University of Rijeka, Vukovarska 58, 51000 Rijeka, Croatia;
+$^{1}$ \quad Faculty of Informatics, Juraj Dobrila University of Pula, Zagrebačka 30, 52100 Pula, Croatia;\\ ratomir.karlovic@unipu.hr (R.K.), luka.sever@unipu.hr (L.S.), marijela.milicevic@unipu.hr (M.M.), sandi.baressi.segota@unipu.hr (S.B.Š.), ivan.lorencin@unipu.hr (I.L.)\\ $^{2}$ \quad Faculty of Engineering Rijeka, University of Rijeka, Vukovarska 58, 51000 Rijeka, Croatia;
 }
 
 % Contact information of the corresponding author
@@ -138,7 +139,7 @@ $^{1}$ \quad Faculty of Informatics, Juraj Dobrila University of Pula, Zagrebač
 %\conference{} % An extended version of a conference paper
 
 % Abstract (Do not insert blank lines, i.e. \\) 
-\abstract{The integration of natural language understanding into conversational commerce requires robustly extracting structured intents from idiomatic text. While cloud-based models are highly capable, their latency, privacy risks, and operational costs necessitate efficient local alternatives. To address this, we empirically evaluate locally deployed, open-weights large language models (LLMs) on parsing multi-intent shopping cart commands into deterministic JSON schemas. We benchmark multiple models across minimal, extended, and few-shot prompting paradigms, utilizing a dual-axis framework to simultaneously measure extraction quality (operation F1-score, exact match, schema validity) and hardware performance (latency, GPU power consumption, VRAM usage). Our evaluation highlights a fundamental trade-off between schema compliance and computational overhead, demonstrating how advanced prompting techniques improve parsing accuracy while measurably impacting inference latency and power draw. Ultimately, this comprehensive profiling identifies optimal model configurations for resource-constrained environments, establishing a practical baseline for deploying cost-effective and energy-efficient LLMs in edge-based retail automation.}
+\abstract{The integration of natural language understanding into conversational commerce requires robustly extracting structured intents from idiomatic text. While cloud-based models are highly capable, their latency, privacy risks, and operational costs necessitate efficient local alternatives. To address this, we empirically evaluate locally deployed, open-weights large language models (LLMs) on parsing multi-intent shopping cart commands into deterministic JSON schemas. We benchmark multiple models across minimal, extended, and few-shot prompting paradigms, utilizing a dual-axis framework to simultaneously measure extraction quality (operation F1-score, exact match, schema validity) and hardware performance (latency, GPU power consumption, VRAM usage). Our evaluation highlights a fundamental trade-off between schema compliance and computational overhead, demonstrating how advanced prompting techniques improve parsing accuracy while measurably impacting inference latency and power draw. Ultimately, this comprehensive profiling identifies optimal model configurations for resource-constrained environments, establishing a practical baseline for deploying cost-effective and energy-efficient LLMs in edge-based retail automation. Ultimately, this comprehensive profiling identifies optimal model configurations for resource-constrained environments: a 3–8B parameter model paired with few-shot prompting recovers over 95\% of the quality of the largest evaluated model at roughly 40× lower energy per command, establishing a practical and quantified baseline for deploying cost-effective LLMs in edge-based retail automation.}
 
 % Keywords
 \keyword{LLM; Prompt Engineering; Natural Language Understanding; JSON Parsing; Structured Output; Model Performance; Conversational Agents; Information Extraction;}
@@ -263,7 +264,7 @@ Given a single natural-language utterance addressed to a shopping assistant, a m
 
 \subsection{Evaluation Corpus}\label{sec:data}
 
-We evaluate on a purpose-built corpus of 5000 shopping-cart commands, each paired with a gold list of operations. The corpus was generated with a frontier large language model (Anthropic Claude~Opus~4.8 at maximum reasoning effort), prompted to emit colloquial, lexically varied utterances together with their exact structured parse; a randomly drawn 5\% subset (250 commands) was then manually inspected to confirm that the gold operations matched the utterance. The corpus is used solely for evaluation: because no model is trained or tuned, there is no train/test split, and every command contributes to the reported metrics.
+We evaluate on a purpose-built corpus of 5000 shopping-cart commands, each paired with a gold list of operations. The corpus was generated with a frontier large language model (Anthropic Claude~Opus~4.8 at maximum reasoning effort), prompted to emit colloquial, lexically varied utterances together with their exact structured parse; a randomly drawn 5\% subset (250 commands) was then manually inspected to confirm that the gold operations matched the utterance. The corpus is used solely for evaluation: because no model is trained or tuned, there is no train/test split, and every command contributes to the reported metrics. It should be noted that using a frontier model to generate the evaluation corpus introduces a potential stylistic bias: the gold-label parses reflect the output conventions of the generating model, and evaluated models whose output style is closer to that model may receive a marginal advantage. This risk is mitigated by the deterministic nature of the extraction task—the gold operations are fully constrained by the utterance content—but cannot be entirely excluded.
 
 Table~\ref{tab:dataset} summarises the corpus. It spans 149 distinct retail products and 18{,}175 gold operations, a mean of 3.64 operations per command, with every command carrying between two and five. Additions outnumber removals (62.6\% vs.\ 37.4\%), and quantities are integers in $[1,25]$ with a mean of 11.0. Because each utterance carries several operations and mixes additions with removals, exact recovery demands that the model track multiple intents at once rather than predict a single dominant action.
 
@@ -513,12 +514,41 @@ Field-level accuracies localise the residual errors. Product-span extraction is 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Limitations and Future Work}
+Several limitations of the present study should be acknowledged when interpreting the reported results and considering their generalisability.
+\subsection{Single-pass evaluation}
+Each of the 90,000 model–prompt–command combinations was generated exactly once without repeated runs or fixed random seeds, as Ollama's default decoding parameters were not overridden. The reported metrics therefore reflect a single stochastic sample, and run-to-run variance remains unquantified. Future work should average results over multiple independent passes to obtain confidence intervals and assess result stability, particularly for configurations near performance boundaries.
+
+\subsection{Synthetic evaluation corpus}
+The 5,000-command evaluation set was generated by a frontier model (Anthropic Claude Opus 4.8) rather than collected from real user interactions. Although a 5\% manual inspection confirmed gold-label correctness, the corpus may not fully capture the lexical diversity, grammatical irregularities, and implicit context of genuine conversational commerce sessions. Evaluation on corpora derived from live retail deployments is an important direction for future work.
+
+\subsection{Corpus generation bias}
+Because the evaluation corpus was generated by a single frontier model, the gold parses reflect one model's interpretation of idiomatic expressions and implicit quantities. Edge cases that the generating model resolves consistently but arbitrarily—for example, whether a few maps to 2 or 3—are embedded in the ground truth without an independent human reference. Future work should complement the synthetic corpus with a human-annotated subset to quantify the impact of this ambiguity on reported metrics.
+
+\subsection{Constrained decoding not evaluated}
+All results are obtained through pure prompt engineering without constrained decoding frameworks such as Outlines or Guidance, which can enforce schema validity at the token level and guarantee 100\% structural compliance regardless of model size. Integrating constrained decoding into the evaluation matrix would allow a direct comparison between inference-time prompt optimisation and decoding-level schema enforcement, and is a natural extension of this work.
+
+\subsection{Single hardware platform}
+All experiments were conducted on a dedicated server node equipped with two NVIDIA A100-SXM4 GPUs. While this environment is representative of a data-centre or high-end on-premises deployment, it does not reflect the hardware constraints of true edge devices such as NVIDIA Jetson modules or Apple Silicon systems. Latency, power draw, and throughput figures will differ substantially on such platforms, and replicating the benchmark on constrained edge hardware is necessary to validate the efficiency claims made for the 3–8B model tier.
+
+\subsection{No fine-tuning baseline}
+The study deliberately isolates inference-time prompt engineering by evaluating all models off-the-shelf without any fine-tuning. While this reproduces the low-effort deployment scenario targeted by the paper, it does not establish how prompt-engineered configurations compare against adapter-based methods such as LoRA on the same compound multi-intent task.
+
+Our prior work addressed this comparison for single-intent inputs; a direct extension to the multi-intent setting would complete the picture.
+
+\subsection{Schema complexity and domain scope}
+The extraction target is a fixed three-field schema covering a single retail domain with 149 product types. Real conversational commerce agents must handle richer schemas, nested structures, and diverse product taxonomies. Evaluating structured extraction across broader schema configurations and retail verticals would strengthen the generalisability of the reported findings.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusions}
 
 We presented a dual-axis benchmark of six open-weights large language models, served entirely on local hardware, for the structured extraction of shopping-cart operations from idiomatic, multi-intent commands. Across 18 model--prompt configurations evaluated on 5000 commands, we jointly quantified extraction quality (Op-F1, EM, and schema validity) and the computational cost of inference (latency, throughput, GPU power, energy, and VRAM), so that accuracy and deployability are weighed on the same footing.
+
+Returning to the hypotheses stated in the introduction, the results provide the following answers.
+H1 is confirmed: few-shot prompting significantly improves Op-F1 and schema validity across all six model scales, with gains inversely proportional to zero-shot competence.
+H2 is partially confirmed and partially inverted: advanced prompting does incur higher peak VRAM allocation through longer prompt contexts, but contrary to expectation it reduces rather than increases inference latency and energy, because the output suppression effect of demonstrations outweighs the prefill overhead.
+H3 is confirmed for minimal and extended prompts but not for few-shot: sub-3B models exhibit persistent structural failures under weaker prompts, yet with few-shot prompting Granite4 3B achieves Op-F1 0.937, which is competitive with models four to eight times larger.
+H4 is confirmed: the 7–8B tier under few-shot prompting offers a strong cost–quality compromise, though the 3B tier with few-shot prompting proves a viable alternative for the most constrained deployments.
 
 Three findings stand out. First, in-context demonstration is the single most effective intervention: few-shot prompting produced the best Op-F1 for every model, and its benefit was inversely proportional to a model's zero-shot competence, compressing the quality gap between the smallest and largest models from wide to marginal. The dominant failure mode of the smaller models under weaker prompts was structural---schema-violating JSON rather than malformed text or incorrect content---and exemplars repaired it almost entirely, indicating that the output contract is conveyed far more reliably by example than by description. Second, longer instructions are not a free improvement: the instruction-rich extended prompt degraded several smaller models by inducing over-normalisation of product spans and idiomatic quantities, a negative result that cautions against scaling prompt complexity without grounding it in examples. Third, on this task richer prompting is not more expensive but cheaper: because decoding dominates latency and the demonstrations suppress verbose generation, few-shot prompting simultaneously raised accuracy and lowered per-command latency and energy, inverting the common assumption that better prompts cost more computation. GPU power, by contrast, was essentially model-bound, so energy per command tracked latency rather than prompt length.
 
