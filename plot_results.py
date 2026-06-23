@@ -96,6 +96,11 @@ COST_METRICS = [
     ("Output tokens",       lambda r: r["performance"]["tokens"]["eval_count_avg"]),
 ]
 
+# Metrics promoted to large standalone charts in the paper (rendered like
+# f1_by_regime: big figure with on-bar black value labels) instead of compact
+# grid panels. The token charts are handled separately in fig_tokens().
+HERO_METRICS = {"JSON validity", "GPU power (W)"}
+
 # --------------------------------------------------------------------------- #
 # Data loading
 # --------------------------------------------------------------------------- #
@@ -191,7 +196,8 @@ def format_bar_value(v):
     return f"{v:.2f}"
 
 
-def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=0.0):
+def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=0.0,
+                value_fontsize=32):
     """Draw one grouped bar chart (one group per model, one bar per regime)."""
     x = np.arange(len(models))
     width = 0.30
@@ -238,7 +244,7 @@ def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=
                     format_bar_value(v),
                     ha="center",
                     va="center",
-                    fontsize=32,
+                    fontsize=value_fontsize,
                     color="black",
                     fontweight="bold",
                 )
@@ -265,8 +271,25 @@ def fig_f1_by_regime(models, data, outdir, dpi):
     save(fig, outdir, "f1_by_regime", dpi)
 
 
+def fig_metric_hero(models, data, label, value_fn, name, outdir, dpi, y_min=0.0,
+                    value_fontsize=22):
+    """Large single-metric chart in the prominent f1_by_regime style: big
+    figure with on-bar black value labels (via the global style). Used for the
+    standalone charts kept in the paper (GPU power, JSON validity, tokens).
+
+    value_fontsize defaults to 22 (smaller than f1_by_regime's 32): these metrics
+    often have near-equal bars within a group (e.g. JSON validity ~1.0), so larger
+    labels at the common height would abut. The token charts override it upward
+    since each is shown on its own at full text width."""
+    fig, ax = plt.subplots(figsize=(20, 10))
+    grouped_bar(ax, models, data, value_fn, label, annotate_values=True, y_min=y_min,
+                value_fontsize=value_fontsize)
+    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
+    save(fig, outdir, name, dpi)
+
+
 def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0.03):
-    fig, ax = plt.subplots(figsize=(14, 9))
+    fig, ax = plt.subplots(figsize=(15, 9))
     f1 = lambda r: r["quality"]["operation_f1"]
 
     for m in models:
@@ -275,7 +298,7 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
         ys = [f1(data[m][r]) for r in regs]
         # trajectory line (min -> ext -> few-shot); dashed red for a collapsing model
         collapse = any(f1(data[m][r]) < 0.05 for r in regs)
-        ax.plot(xs, ys, lw=1.0, zorder=1,
+        ax.plot(xs, ys, lw=1.8, zorder=1,
                 color="#C44E52" if collapse else "0.6",
                 ls="--" if collapse else "-", alpha=0.8)
 
@@ -283,15 +306,15 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
     for regime in REGIMES:
         xs = [x_fn(data[m][regime]) for m in models if regime in data[m]]
         ys = [f1(data[m][regime]) for m in models if regime in data[m]]
-        ax.scatter(xs, ys, s=70 if regime == "few_shot" else 45,
+        ax.scatter(xs, ys, s=320 if regime == "few_shot" else 200,
                    marker=REGIME_MARKERS[regime], color=REGIME_COLORS[regime],
-                   edgecolor="white", linewidth=0.5, zorder=3,
+                   edgecolor="white", linewidth=0.8, zorder=3,
                    label=REGIME_LABELS[regime])
 
     # model labels near the few-shot point (tweak offsets to taste)
     label_off = {
-        "gemma4_31b": (0, 10), "gpt_oss_20b": (8, 6), "llama3_1_8b": (8, 8),
-        "mistral_7b": (8, -14), "granite4_3b": (-8, 12), "llama3_2_3b": (0, -16),
+        "gemma4_31b": (0, 14), "gpt_oss_20b": (0, 16), "llama3_1_8b": (26, 16),
+        "mistral_7b": (6, -26), "granite4_3b": (-30, 18), "llama3_2_3b": (-16, -18),
     }
     for m in models:
         regs = [r for r in REGIMES if r in data[m]]
@@ -300,7 +323,7 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
         ax.annotate(label_for(m, data),
                     (x_fn(data[m][anchor]), f1(data[m][anchor])),
                     textcoords="offset points", xytext=(dx, dy),
-                    fontsize=16, ha="center")
+                    fontsize=22, ha="center")
 
     if logx:
         ax.set_xscale("log")
@@ -315,9 +338,11 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
 
 
 def fig_quality_cost(models, data, outdir, dpi):
+    # Zoom the F1 axis to [0.4, 1.05]: with Phi3 excluded every configuration
+    # scores >= 0.5, so starting near 0 wastes the lower half of the panel.
     _tradeoff(models, data, energy_j,
               "Estimated energy per command (J, log scale)",
-              "quality_cost_tradeoff", outdir, dpi)
+              "quality_cost_tradeoff", outdir, dpi, y_min=0.4)
 
 
 def fig_latency_f1(models, data, outdir, dpi):
@@ -349,18 +374,22 @@ def fig_metric_by_regime(models, data, label, value_fn, name, outdir, dpi):
 def fig_quality_metrics(models, data, outdir, dpi):
     for label, fn in QUALITY_METRICS:
         name = f"quality_{metric_slug(label)}_by_regime"
-        fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
+        render = fig_metric_hero if label in HERO_METRICS else fig_metric_by_regime
+        render(models, data, label, fn, name, outdir, dpi)
 
 
 def fig_cost_metrics(models, data, outdir, dpi):
     for label, fn in COST_METRICS:
         name = f"cost_{metric_slug(label)}_by_regime"
-        fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
+        render = fig_metric_hero if label in HERO_METRICS else fig_metric_by_regime
+        render(models, data, label, fn, name, outdir, dpi)
 
 
 def fig_tokens(models, data, outdir, dpi):
-    """Prompt/output token plots written as separate files."""
-    fig_metric_by_regime(
+    """Prompt/output token plots written as separate files, in the large style
+    with on-bar value labels. Each is shown on its own at full text width in the
+    paper, so the labels use a slightly larger font than the other hero charts."""
+    fig_metric_hero(
         models,
         data,
         "Mean prompt tokens",
@@ -368,8 +397,9 @@ def fig_tokens(models, data, outdir, dpi):
         "prompt_tokens_by_regime",
         outdir,
         dpi,
+        value_fontsize=26,
     )
-    fig_metric_by_regime(
+    fig_metric_hero(
         models,
         data,
         "Mean output tokens",
@@ -377,6 +407,7 @@ def fig_tokens(models, data, outdir, dpi):
         "output_tokens_by_regime",
         outdir,
         dpi,
+        value_fontsize=26,
     )
 
 # --------------------------------------------------------------------------- #
