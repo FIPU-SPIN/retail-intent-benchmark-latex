@@ -416,7 +416,7 @@ Few-shot prompting yields the best Op-F1 for all six models, and the magnitude o
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/f1_by_regime.pdf}
+\includegraphics[width=\linewidth]{figures/f1_by_regime.pdf}
 \caption{Operation-level F1 by model and prompting regime. Few-shot prompting (teal) yields the best accuracy for all six models and sharply compresses the gap between small and large models; the extended prompt (orange) is inconsistent, degrading Mistral 7B and the Llama3.2 3B small model relative to the minimal prompt (blue).\label{fig:f1bars}}
 \end{figure}
 
@@ -424,7 +424,7 @@ Decomposing quality into format adherence and content correctness clarifies the 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/quality_json_validity_by_regime.pdf}
+\includegraphics[width=\linewidth]{figures/quality_json_validity_by_regime.pdf}
 \caption{JSON validity by model and prompting regime (bars: minimal, extended, few-shot). Across almost all configurations the models emit parseable JSON at or near the ceiling; the residual small-model deficits under weaker prompts are predominantly schema violations rather than malformed JSON (cf.\ the schema-validity column of Table~\ref{tab:quality}).\label{fig:jsonvalidity}}
 \end{figure}
 
@@ -471,13 +471,13 @@ The cost profile is governed by decoding rather than prefill. Although few-shot 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/prompt_tokens_by_regime.pdf}
+\includegraphics[width=\linewidth]{figures/prompt_tokens_by_regime.pdf}
 \caption{Mean prompt (input) tokens per command, by model and prompting regime. Few-shot prompts are markedly longer on the input side because each carries three worked exemplars, whereas the minimal and extended prompts are far shorter.\label{fig:ptokens}}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/output_tokens_by_regime.pdf}
+\includegraphics[width=\linewidth]{figures/output_tokens_by_regime.pdf}
 \caption{Mean output (decoded) tokens per command, by model and prompting regime. Despite the longer input, few-shot prompting yields \emph{shorter} output: the demonstrations elicit concise, minified JSON and suppress verbose generation. Because decoding dominates latency, this reduction in output tokens is the mechanism behind the lower few-shot latency and energy reported in Table~\ref{tab:cost}.\label{fig:otokens}}
 \end{figure}
 
@@ -487,7 +487,7 @@ We report mean VRAM occupancy in the underlying logs for completeness but cautio
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/cost_gpu_power__w_by_regime.pdf}
+\includegraphics[width=\linewidth]{figures/cost_gpu_power__w_by_regime.pdf}
 \caption{Mean GPU power draw (averaged across the two A100 GPUs) by model and prompting regime (bars: minimal, extended, few-shot). Power is essentially model-bound: within each model it is nearly invariant across prompting regimes, so per-command energy ($E\approx\bar{P}\,\bar{t}$) is governed by latency rather than by power. The remaining cost metrics---latency, throughput, energy, VRAM, and token counts---are reported in Table~\ref{tab:cost}.\label{fig:gpupower}}
 \end{figure}
 
@@ -495,9 +495,10 @@ We report mean VRAM occupancy in the underlying logs for completeness but cautio
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\linewidth]{figures/quality_cost_tradeoff.pdf}
+\includegraphics[width=\linewidth]{figures/quality_cost_tradeoff.pdf}
 \caption{Quality--cost trade-off across all 18 configurations. Each point is one model--prompt configuration; thin grey lines connect the three regimes of a model. The horizontal axis is the estimated energy per command on a logarithmic scale. For every model the few-shot configuration (star) lies above and to the left of its minimal (circle) and extended (square) counterparts---simultaneously more accurate and more energy-efficient---so the operative trade-off is across model scale along the few-shot frontier rather than across prompts.\label{fig:tradeoff}}
 \end{figure}
+
 
 Figure~\ref{fig:tradeoff} plots every configuration in the energy--quality plane and reveals the central finding of this study: for capable models, few-shot prompting is Pareto-improving rather than Pareto-trading---it moves each model up (higher F1) and to the left (lower energy) at once. The few-shot points dominate their own minimal and extended counterparts for all six models. The genuine trade-off is therefore not between prompts but across model scale: along the few-shot frontier, quality and cost are positively coupled, and the practitioner's decision reduces to selecting an operating point on that frontier. Three operating points are practically distinct:
 

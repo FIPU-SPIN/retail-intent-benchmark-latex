@@ -63,7 +63,7 @@ DISPLAY = {
 
 REGIMES = ["minimal", "extended", "few_shot"]
 REGIME_LABELS = {"minimal": "Minimal", "extended": "Extended", "few_shot": "Few-shot"}
-REGIME_COLORS = {"minimal": "#4C72B0", "extended": "#DD8452", "few_shot": "#1F9E89"}
+REGIME_COLORS = {"minimal": "#4AA8EF", "extended": "#FFA53C", "few_shot": "#2FD3B4"}
 REGIME_MARKERS = {"minimal": "o", "extended": "s", "few_shot": "*"}
 
 # --------------------------------------------------------------------------- #
@@ -197,7 +197,7 @@ def format_bar_value(v):
 
 
 def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=0.0,
-                value_fontsize=32):
+                value_fontsize=32, label_above=False):
     """Draw one grouped bar chart (one group per model, one bar per regime)."""
     x = np.arange(len(models))
     width = 0.30
@@ -227,23 +227,30 @@ def grouped_bar(ax, models, data, value_fn, ylabel, annotate_values=True, y_min=
     ax.set_ylim(bottom=y_min, top=ymax * 1.08 if ymax > 0 else 1.0)
 
     if annotate_values:
-        common_label_y = y_min + (ymax - y_min) * 0.48 if ymax > y_min else y_min
+        yr = (ymax - y_min) if ymax > y_min else 1.0
+        common_label_y = y_min + yr * 0.48
         for bars, vals in bar_groups:
             for bar, v in zip(bars, vals):
                 if math.isnan(v):
                     continue
-                # Keep labels at one common height when the bar allows it,
-                # otherwise fall back to centered-in-bar placement.
-                if v > common_label_y + 0.01:
-                    label_y = common_label_y
+                if label_above:
+                    # Sit just above each bar on the white background: the most
+                    # legible placement, and the bars' own heights stagger the
+                    # labels so near-equal values do not collide.
+                    label_y, va = v + yr * 0.012, "bottom"
+                elif v > common_label_y + 0.01:
+                    # one common height when the bar is tall enough,
+                    label_y, va = common_label_y, "center"
                 else:
+                    # otherwise centered in the (short) bar.
                     label_y = y_min + (v - y_min) / 2.0 if v >= y_min else v / 2.0
+                    va = "center"
                 ax.text(
                     bar.get_x() + bar.get_width() / 2.0,
                     label_y,
                     format_bar_value(v),
                     ha="center",
-                    va="center",
+                    va=va,
                     fontsize=value_fontsize,
                     color="black",
                     fontweight="bold",
@@ -263,10 +270,11 @@ def save(fig, outdir, name, dpi):
 # --------------------------------------------------------------------------- #
 
 def fig_f1_by_regime(models, data, outdir, dpi):
-    fig, ax = plt.subplots(figsize=(20, 10))
+    fig, ax = plt.subplots(figsize=(20, 12))
     grouped_bar(ax, models, data,
-                lambda r: r["quality"]["operation_f1"], "Operation F1", y_min=0.4)
-    ax.set_ylim(0.4, 1.08)
+                lambda r: r["quality"]["operation_f1"], "Operation F1", y_min=0.4,
+                value_fontsize=26, label_above=True)
+    ax.set_ylim(0.4, 1.10)
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
     save(fig, outdir, "f1_by_regime", dpi)
 
@@ -281,7 +289,7 @@ def fig_metric_hero(models, data, label, value_fn, name, outdir, dpi, y_min=0.0,
     often have near-equal bars within a group (e.g. JSON validity ~1.0), so larger
     labels at the common height would abut. The token charts override it upward
     since each is shown on its own at full text width."""
-    fig, ax = plt.subplots(figsize=(20, 10))
+    fig, ax = plt.subplots(figsize=(20, 12))
     grouped_bar(ax, models, data, value_fn, label, annotate_values=True, y_min=y_min,
                 value_fontsize=value_fontsize)
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
@@ -289,7 +297,7 @@ def fig_metric_hero(models, data, label, value_fn, name, outdir, dpi, y_min=0.0,
 
 
 def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0.03):
-    fig, ax = plt.subplots(figsize=(15, 9))
+    fig, ax = plt.subplots(figsize=(16, 11))
     f1 = lambda r: r["quality"]["operation_f1"]
 
     for m in models:
@@ -312,9 +320,11 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
                    label=REGIME_LABELS[regime])
 
     # model labels near the few-shot point (tweak offsets to taste)
+    # Offsets (in points) placing each model name in clear space above/beside its
+    # few-shot point, away from the grey trajectory lines that descend from it.
     label_off = {
-        "gemma4_31b": (0, 14), "gpt_oss_20b": (0, 16), "llama3_1_8b": (26, 16),
-        "mistral_7b": (6, -26), "granite4_3b": (-30, 18), "llama3_2_3b": (-16, -18),
+        "gemma4_31b": (0, 16), "gpt_oss_20b": (0, 16), "llama3_1_8b": (90, 6),
+        "mistral_7b": (0, 26), "granite4_3b": (-40, 12), "llama3_2_3b": (-26, -14),
     }
     for m in models:
         regs = [r for r in REGIMES if r in data[m]]
@@ -323,7 +333,8 @@ def _tradeoff(models, data, x_fn, xlabel, name, outdir, dpi, logx=True, y_min=-0
         ax.annotate(label_for(m, data),
                     (x_fn(data[m][anchor]), f1(data[m][anchor])),
                     textcoords="offset points", xytext=(dx, dy),
-                    fontsize=22, ha="center")
+                    fontsize=22, ha="center", zorder=5,
+                    bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="none", alpha=0.75))
 
     if logx:
         ax.set_xscale("log")
@@ -381,8 +392,13 @@ def fig_quality_metrics(models, data, outdir, dpi):
 def fig_cost_metrics(models, data, outdir, dpi):
     for label, fn in COST_METRICS:
         name = f"cost_{metric_slug(label)}_by_regime"
-        render = fig_metric_hero if label in HERO_METRICS else fig_metric_by_regime
-        render(models, data, label, fn, name, outdir, dpi)
+        if label in HERO_METRICS:
+            # GPU power only spans ~115-160 W, so start its axis at 100 to make
+            # the (small) cross-model differences legible rather than near-flat.
+            y_min = 100.0 if label == "GPU power (W)" else 0.0
+            fig_metric_hero(models, data, label, fn, name, outdir, dpi, y_min=y_min)
+        else:
+            fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
 
 
 def fig_tokens(models, data, outdir, dpi):
