@@ -281,17 +281,17 @@ def fig_f1_by_regime(models, data, outdir, dpi):
 
 def fig_metric_hero(models, data, label, value_fn, name, outdir, dpi, y_min=0.0,
                     value_fontsize=22, y_max=None):
-    """Large single-metric chart in the prominent f1_by_regime style: big
-    figure with on-bar black value labels (via the global style). Used for the
+    """Large single-metric chart in the prominent f1_by_regime style: big figure
+    with black value labels above each bar (via the global style). Used for the
     standalone charts kept in the paper (GPU power, JSON validity, tokens).
 
     value_fontsize defaults to 22 (smaller than f1_by_regime's 32): these metrics
     often have near-equal bars within a group (e.g. JSON validity ~1.0), so larger
-    labels at the common height would abut. The token charts override it upward
-    since each is shown on its own at full text width."""
+    labels would abut horizontally. The token charts override it upward since each
+    is shown on its own at full text width."""
     fig, ax = plt.subplots(figsize=(20, 12))
     grouped_bar(ax, models, data, value_fn, label, annotate_values=True, y_min=y_min,
-                value_fontsize=value_fontsize)
+                value_fontsize=value_fontsize, label_above=True)
     if y_max is not None:
         ax.set_ylim(y_min, y_max)
     ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5))
@@ -388,9 +388,11 @@ def fig_quality_metrics(models, data, outdir, dpi):
     for label, fn in QUALITY_METRICS:
         name = f"quality_{metric_slug(label)}_by_regime"
         if label in HERO_METRICS:
-            # JSON validity sits at 0.89-1.0, so zoom its axis to [0.4, 1.0]
-            # rather than starting at 0 where the bars look near-identical.
-            kw = {"y_min": 0.4, "y_max": 1.0} if label == "JSON validity" else {}
+            # JSON validity sits at 0.89-1.0, so zoom its axis to [0.4, ~1.0]
+            # rather than starting at 0 where the bars look near-identical. The
+            # top is 1.06 (ticks still run to 1.0) to leave room for the value
+            # labels that sit above the full-height (1.00) bars.
+            kw = {"y_min": 0.4, "y_max": 1.06} if label == "JSON validity" else {}
             fig_metric_hero(models, data, label, fn, name, outdir, dpi, **kw)
         else:
             fig_metric_by_regime(models, data, label, fn, name, outdir, dpi)
